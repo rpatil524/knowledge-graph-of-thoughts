@@ -43,6 +43,26 @@ from kgot.utils.log_and_statistics import collect_stats
 
 logger = logging.getLogger("Controller.SurferTool")
 
+def _content_to_text(content):
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                text = item.get("text")
+                if text is None:
+                    text = item.get("content")
+                if text is not None:
+                    parts.append(str(text))
+            elif hasattr(item, "text"):
+                parts.append(str(item.text))
+        return "".join(parts)
+    return str(content)
+
+
 class OpenAIModel:
     def __init__(self, model_name="gpt-4o", temperature=0.5, usage_statistics: UsageStatistics = None):
         self.model_name = model_name
@@ -51,8 +71,8 @@ class OpenAIModel:
         self.llm = llm_utils.get_llm(model_name=model_name, temperature=temperature)
 
     @collect_stats("SurferTool.__call__")
-    def __call__(self, messages, stop_sequences=[]):
-        
+    def __call__(self, messages, stop_sequences=None):
+
         openai_role_conversions = {
             MessageRole.TOOL_RESPONSE: MessageRole.USER,
         }
@@ -66,8 +86,12 @@ class OpenAIModel:
             for msg in messages
         ]
 
-        response = invoke_with_retry(self.llm, formatted_messages, stop = stop_sequences)
-        return response.content
+        if not stop_sequences:
+            response = invoke_with_retry(self.llm, formatted_messages)
+            return _content_to_text(response.content)
+
+        response = invoke_with_retry(self.llm, formatted_messages, stop=stop_sequences)
+        return _content_to_text(response.content)
     
 
 class SearchToolSchema(BaseModel):

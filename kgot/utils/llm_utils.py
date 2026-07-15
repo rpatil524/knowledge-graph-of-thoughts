@@ -45,7 +45,59 @@ def _get_llm_retries():
     return NUM_LLM_RETRIES
 
 
-def invoke_with_retry(chain, *args, **kwargs):
+def _uses_openai_responses_api(chain: ChatOpenAI) -> bool:
+    if isinstance(getattr(chain, "use_responses_api", None), bool):
+        return chain.use_responses_api
+    return any(
+        getattr(chain, attr, None) is not None
+        for attr in ["reasoning", "include", "truncation"]
+    ) or bool(getattr(chain, "use_previous_response_id", False))
+
+
+def _content_to_text(content):
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                text = item.get("text")
+                if text is None:
+                    text = item.get("content")
+                if text is not None:
+                    parts.append(str(text))
+            elif hasattr(item, "text"):
+                parts.append(str(item.text))
+        return "".join(parts)
+    return str(content)
+
+
+def _truncate_response_at_stop(response, stop):
+    if isinstance(stop, str):
+        stop = [stop]
+    if (
+        not stop
+        or not hasattr(response, "content")
+    ):
+        return response
+    content = _content_to_text(response.content)
+    stop_positions = [content.find(seq) for seq in stop if seq]
+    stop_positions = [position for position in stop_positions if position >= 0]
+    if stop_positions:
+        content = content[:min(stop_positions)]
+    response.content = content
+    return response
+
+
+def invoke_with_retry(chain: (ChatOpenAI | ChatOllama), *args, **kwargs):
+    stop = kwargs.pop('stop', None)
+    omit_stop = (
+        stop is not None
+        and isinstance(chain, ChatOpenAI)
+        and _uses_openai_responses_api(chain)
+    )
     try: 
         for attempt in Retrying(
             wait=wait_random_exponential(min=1, max=60), 
@@ -60,6 +112,13 @@ def invoke_with_retry(chain, *args, **kwargs):
         ):
             with attempt:
                 try:
+                    if omit_stop:
+                        return _truncate_response_at_stop(
+                            chain.invoke(*args, **kwargs),
+                            stop,
+                        )
+                    if stop is not None:
+                        return chain.invoke(*args, stop=stop, **kwargs)
                     return chain.invoke(*args, **kwargs)
                 except InternalServerError as e:
                     logger.error(f"Internal Server Error when invoking the chain: {str(e)} - Type of error: {type(e)}")
@@ -104,7 +163,7 @@ def get_llm(model_name: str, temperature: float = None, max_tokens: int = None):
             max_tokens=model_config["max_tokens"],
             organization=model_config["organization"],
             **{key: model_config[key] for key in 
-               ["temperature", "reasoning_effort"] if key in model_config}
+               ["temperature", "reasoning"] if key in model_config}
         )
     elif model_config["model_family"] == "Ollama":
         llm_to_return = ChatOllama(

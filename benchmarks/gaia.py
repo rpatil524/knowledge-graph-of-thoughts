@@ -23,9 +23,17 @@ from benchmarks.scorers.gaia_scorer import check_close_call, question_scorer
 from kgot.utils import UsageStatistics
 
 
+def _get_gaia_rows(gaia_data):
+    if isinstance(gaia_data, dict):
+        return gaia_data["rows"]
+    if isinstance(gaia_data, list):
+        return gaia_data
+    raise TypeError(f"Unsupported GAIA data format: {type(gaia_data).__name__}")
+
+
 def check_answers(solver_function, gaia_data, already_solved, log_folder_base, correct_stats_json_file_path, attachments_folder):
     # Iterate over rows using tqdm with a dynamic description
-    for row in tqdm(gaia_data['rows'][already_solved:], desc="Processing questions", unit="question"):
+    for row in tqdm(_get_gaia_rows(gaia_data)[already_solved:], desc="Processing questions", unit="question"):
         row_idx = row['row_idx']
 
         question = row['row']['Question']
@@ -147,7 +155,7 @@ def main(
             with open(os.path.join(log_folder_base, "correct_stats.json"), 'r') as f:
                 results = json.load(f)
                 already_solved = len(results)
-                if already_solved == len(gaia_data['rows']):
+                if already_solved == len(_get_gaia_rows(gaia_data)):
                     already_solved = 0
                     print("\033[4;32m\033[1mAll questions already solved. Skipping...\033[0m")
                     exit(0)

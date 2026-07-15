@@ -15,6 +15,7 @@ import traceback
 import warnings
 from io import StringIO
 from pprint import pformat
+from time import sleep
 from typing import Any, Dict, List, Tuple, Type
 
 import pandas as pd
@@ -49,6 +50,25 @@ class WikipediaTool:
         self.usage_statistics = usage_statistics
         self.model_name = model_name
         self.temperature = temperature
+
+    def _load_wikipedia_page(self, page_title: str, retries: int = 3):
+        for attempt in range(retries + 1):
+            try:
+                return wikipedia.page(page_title, auto_suggest=False)
+            except wikipedia.DisambiguationError:
+                raise
+            except (
+                requests.exceptions.JSONDecodeError,
+                requests.exceptions.RequestException,
+                ValueError,
+            ) as e:
+                if attempt == retries:
+                    logger.info(f"Could not load Wikipedia page '{page_title}' after {retries + 1} attempts: {e}")
+                    return None
+                sleep(0.5 * (attempt + 1))
+            except Exception as e:
+                logger.info(f"Could not load Wikipedia page '{page_title}': {e}")
+                return None
 
     def search(self, query: str, top_k: int = 10) -> Dict[str, str]:
         search_results = wikipedia.search(query, results=top_k)
@@ -300,7 +320,9 @@ class WikipediaTool:
         page = None
         if date == "cur":
             try:
-                page = wikipedia.page(page_title, auto_suggest=False)  # Get the page without tables / images
+                page = self._load_wikipedia_page(page_title)  # Get the page without tables / images
+                if page is None:
+                    return f"Error retrieving {page_title}, skipping..."
                 page = page.content
             except wikipedia.DisambiguationError as e:
                 page =  f"This page is a disambiguation of the term {page_title}.\n{e}"

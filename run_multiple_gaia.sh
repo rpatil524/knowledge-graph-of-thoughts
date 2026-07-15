@@ -14,7 +14,9 @@ PYTHON_SCRIPT="benchmarks/gaia.py"
 
 # Define an array of GAIA JSON file paths
 gaia_files=(
-    "benchmarks/datasets/GAIA/validation_subsets/dummy.json"
+    "benchmarks/datasets/GAIA/validation_subsets/level_1.json"
+    "benchmarks/datasets/GAIA/validation_subsets/level_2.json"
+    "benchmarks/datasets/GAIA/validation_subsets/level_3.json"
 )
 
 # Define the number of runs (change this to any number you want)

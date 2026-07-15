@@ -51,18 +51,16 @@ def load_parquet_rows_with_index(parquet_path: str):
 
 
 def discover_metadata_parquets(data_dir: str):
-    patterns = [
-        os.path.join(data_dir, "**", "metadata.parquet"),
-        os.path.join(data_dir, "**", "metadata_*.parquet"),
-        os.path.join(data_dir, "**", "*metadata*.parquet"),
-    ]
-    paths = []
-    for pat in patterns:
-        paths.extend(glob.glob(pat, recursive=True))
+    all_metadata_paths = sorted(set(glob.glob(os.path.join(data_dir, "**", "*metadata*.parquet"), recursive=True)))
+    split_metadata_paths = [path for path in all_metadata_paths if os.path.basename(path) != "metadata.parquet"]
 
-    # de-dup + stable order
-    paths = sorted(set(paths))
-    return paths
+    # Hugging Face snapshots can contain both a full metadata.parquet and per-level
+    # metadata files. Reading both duplicates every task, so prefer the per-level
+    # files when they are present.
+    if split_metadata_paths:
+        return split_metadata_paths
+
+    return all_metadata_paths
 
 
 def save_json(data: object, path: str):
@@ -142,6 +140,7 @@ def setup_question_json(input_dir: str, split: str, with_dummy: bool = False):
 
     all_rows = []
     global_idx = 0
+    seen_task_ids = set()
 
     for p in parquet_paths:
         rows = load_parquet_rows_with_index(p)
@@ -152,6 +151,12 @@ def setup_question_json(input_dir: str, split: str, with_dummy: bool = False):
 
             # Nest annotator metadata
             row = nest_prefixed_fields(row, "Annotator Metadata")
+
+            task_id = row.get("task_id")
+            if task_id:
+                if task_id in seen_task_ids:
+                    continue
+                seen_task_ids.add(task_id)
 
             # Write back normalized row
             item["row"] = row
@@ -175,7 +180,7 @@ def setup_question_json(input_dir: str, split: str, with_dummy: bool = False):
     subsets_dir = os.path.join("GAIA", f"{split}_subsets")
     os.makedirs(subsets_dir, exist_ok=True)
     for level_key, group in grouped.items():
-        save_json(group, os.path.join(subsets_dir, f"{level_key}.json"))
+        save_json({"rows": group}, os.path.join(subsets_dir, f"{level_key}.json"))
 
     if with_dummy:
         save_json({"rows": all_rows[:5]}, os.path.join(subsets_dir, "dummy.json"))

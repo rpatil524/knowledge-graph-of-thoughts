@@ -50,7 +50,7 @@ snapshots/
 apicache/
 kgot/knowledge_graph/_snapshots/*
 
-results/current_runs/*
+results/*
 !results/current_runs/archive.tar.*
 !results/current_runs/README.md
 

@@ -27,23 +27,24 @@ classifiers = [
   "Operating System :: OS Independent",
 ]
 dependencies = [
-  "asyncio>=3.4.3",
-  "beautifulsoup4>=4.12.3",
+  "asyncio>=3.4.3,<4.0.0",
+  "beautifulsoup4>=4.12.3,<5.0.0",
   "cairosvg", # svg file for ImageQuestion
   "docx2txt",
   "fastapi>=0.111.0",
-  "fastparquet==2025.12.0",  
-  "faiss-cpu>=1.7.4",
+  "fastparquet",
+  "faiss-cpu>=1.8.1,<2.0.0",
   "flask", # Python tool
   "google-search-results>=2.4.2,<3.0.0",
   "html5lib>=1.1",
   "huggingface_hub==0.30.1",
   "kaleido==1.0.0rc13",
   "jq", # json files
-  "langchain>=0.2.11,<1.0.0",
-  "langchain_community>=0.2.10,<1.0.0",
+  "langchain>=0.3.27,<1.0.0",
+  "langsmith>=0.3.45,<0.4.0",
+  "langchain_community>=0.3.2,<0.4.0",
   "langchain_core>=0.2.26,<1.0.0",
-  "langchain-google-community>=1.0.7",
+  "langchain-google-community",
   "langchain_openai>=0.1.20,<1.0.0",
   "lxml>=5.2.2",
   "mammoth>=1.8.0,<2.0.0",
@@ -51,7 +52,9 @@ dependencies = [
   "matplotlib>=3.8.4",
   "neo4j==5.23.1",
   "networkx", # xlsx files
+  "numpy<2.0.0",
   "openai>=1.37.1",
+  "opencv-python<4.13.0.9",
   "openpyxl", # xlsx files
   "pandas==2.2.2",
   "pathvalidate>=3.2.1,<4.0.0",
@@ -67,7 +70,6 @@ dependencies = [
   "plotly",
   "puremagic>=1.27,<2.0",
   "rank-bm25>=0.2.2",
-  "rapidocr-onnxruntime",
   "tabulate>=0.9.0",
   "tenacity>=8.3.0",
   "tqdm>=4.66.4",
@@ -77,7 +79,7 @@ dependencies = [
   "scrapegraphai==1.25.1",
   "serpapi>=0.1.5,<0.2.0",
   "unstructured", # pptx and images
-  "unstructured_inference", # pptx and images
+  "unstructured_inference<1.6.13",
   "unstructured_pytesseract", # pptx and images
   "sparqlwrapper",
   "wikipedia>=1.4.0",

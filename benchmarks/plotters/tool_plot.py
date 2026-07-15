@@ -9,6 +9,7 @@
 # Contributions: Lorenzo Paleari
 
 import os
+import logging
 from enum import Enum
 from typing import Any, Dict, List
 
@@ -22,6 +23,8 @@ from benchmarks.plotters import (
     load_reference_tools,
 )
 from benchmarks.plotters.plot_operations import PlotOperation
+
+logger = logging.getLogger("Plotters.ToolPlot")
 
 
 class ToolMatch(str, Enum):
@@ -73,6 +76,20 @@ class ToolPlot(PlotOperation):
 
     Inherits from the PlotOperation class and implements its abstract methods.
     """    
+
+    def _write_plotly_figure(self, fig: go.Figure, filename: str) -> None:
+        pdf_path = os.path.join(self.result_dir_path, f"{filename}.pdf")
+        html_path = os.path.join(self.result_dir_path, f"{filename}.html")
+        try:
+            kaleido.write_fig_sync(fig, pdf_path)
+        except Exception as e:
+            logger.warning(
+                "Kaleido failed to export '%s' as PDF; writing HTML fallback to '%s': %s",
+                filename,
+                html_path,
+                e,
+            )
+            fig.write_html(html_path)
 
     def locate(self, dir_path: str) -> Dict[str, pd.DataFrame]:
         """
@@ -271,7 +288,7 @@ class ToolPlot(PlotOperation):
         )
 
         # Save outputs
-        kaleido.write_fig_sync(fig, os.path.join(self.result_dir_path, f"{filename}.pdf"))
+        self._write_plotly_figure(fig, filename)
 
     def _plot_sankey(self, df: pd.DataFrame, filename: str) -> None:
         """Create sankey flow diagram showing tool correctness to GAIA success"""
@@ -336,7 +353,7 @@ class ToolPlot(PlotOperation):
             width=600,
             margin=dict(t=100, l=50, r=50, b=100)
         )
-        kaleido.write_fig_sync(fig, os.path.join(self.result_dir_path, f"{filename}.pdf"))
+        self._write_plotly_figure(fig, filename)
 
     def _plot_kgot_tool_usage(self, df: pd.DataFrame, filename: str) -> None:
         """Create a pie chart showing KGoT tool usage distribution."""
@@ -390,7 +407,7 @@ class ToolPlot(PlotOperation):
         )
         
         # Save output
-        kaleido.write_fig_sync(fig, os.path.join(self.result_dir_path, f"{filename}.pdf"))
+        self._write_plotly_figure(fig, filename)
 
     def _plot_category_success_bar(self, df: pd.DataFrame, filename: str) -> None:
         """Create grouped bar chart showing GAIA categories success"""
@@ -439,4 +456,4 @@ class ToolPlot(PlotOperation):
         )
         
         # Save the figure
-        kaleido.write_fig_sync(fig, os.path.join(self.result_dir_path, f"{filename}.pdf"))
+        self._write_plotly_figure(fig, filename)
